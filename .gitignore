@@ -1,2 +1,5 @@
 Client/Library/
 Client/Logs/
+Client/Temp/
+Client/obj/
+Client/.vs/
