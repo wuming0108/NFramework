@@ -18,7 +18,15 @@ namespace NFramework.Editor
     public class ResourceCollection 
     {
         public const string AB_PATH = "Assets/GameResources";
-        [MenuItem("AssetBundle/资源收集", false)]
+        [MenuItem("AssetBundle/Android AB", false)]
+
+        public static void BuildAndroidAB()
+        {
+            CollectionDependents();
+        }
+
+
+
         public static void CollectionDependents()
         {  
             string[] paths = Directory.GetDirectories(AB_PATH, "*", SearchOption.TopDirectoryOnly);
@@ -29,27 +37,53 @@ namespace NFramework.Editor
 
                 for (int j = 0; j < paths2.Length; j++)
                 {
-                    CollectionABResource(paths2[j]);
+                    CollectionResourceInfo(paths2[j],0);
                 }
             }
         }
 
 
-
-        public static void CollectionABResource(string path)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="path"></param>
+        /// <param name="layer">被依赖的第几层 </param>
+        public static bool CollectionResourceInfo(string path,int layer)
         {
-            if (path.EndsWith(".meta"))
-                return;
-            string abName = FileUtility.GetABNameFromPath(path);
-            CollectionPools.CollectionData(path, abName); 
+            // 依赖关系超过3层 直接报错 整理资源
+            if (layer >= 3)
+            {
+                Debug.LogError("Dependencies Layer Depth over 3 : " + path);
+                return false;
+            }
+
+            //如果依赖的内容在打包的路径里面 可以直接忽略
+            if (layer > 0 && path.Contains(AB_PATH))
+            { 
+                return true;
+            }
+
+            // 根据规则 获取ab名称
+            string abName = GetABNameFromPath(path);
+
+            CollectionPools.CollectionData(path, abName);
 
             string[] files = AssetDatabase.GetDependencies(path, true);
 
             for (int i = 0; i < files.Length; i++)
-                CollectionABResource(files[i]);
+            { 
+                bool error = CollectionResourceInfo(files[i], layer + 1);
+
+                if (!error)
+                {
+                    Debug.LogError("Dependencie Error : " + path);
+                    return false;
+                }
+            } 
+            return true;
         }
 
-
+  
         /// <summary>
         /// 如果是图集的话 直接用图集名称做ab名
         /// </summary>
@@ -57,17 +91,22 @@ namespace NFramework.Editor
         /// <param name="abName"></param>
         /// <param name="isForder"></param>
         /// <returns></returns>
-        public static bool CollectionAltasResource(string path, string abName)
+        public static string GetABNameFromPath(string path)
         {
             var textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
+            
+            //如果是图集 就把同名的图集打入一个ab包内
 
-            if (textureImporter == null)
-                return false;
-
-            if (textureImporter.textureType == TextureImporterType.Sprite)
-                return false;
-
-            return true;
+            if (textureImporter != null )
+            {
+                if (textureImporter.textureType == TextureImporterType.Sprite)
+                {
+                    if (!string.IsNullOrEmpty(textureImporter.spritePackingTag))
+                        return "atlas_" + textureImporter.spritePackingTag;
+                }
+            }
+             
+            return FileUtility.GetABNameFromPath(path);
         }
 
 
