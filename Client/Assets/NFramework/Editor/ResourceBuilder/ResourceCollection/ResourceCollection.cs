@@ -93,18 +93,23 @@ namespace NFramework.Editor
         /// <returns></returns>
         public static string GetABNameFromPath(string path)
         {
-            var textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
-            
-            //如果是图集 就把同名的图集打入一个ab包内
-
-            if (textureImporter != null )
+            // 如果不属于主动打的ab 图集单独处理
+            if (!path.Contains(AB_PATH))
             {
-                if (textureImporter.textureType == TextureImporterType.Sprite)
+                var textureImporter = AssetImporter.GetAtPath(path) as TextureImporter;
+
+                //如果是图集 就把同名的图集打入一个ab包内
+
+                if (textureImporter != null)
                 {
-                    if (!string.IsNullOrEmpty(textureImporter.spritePackingTag))
-                        return "atlas_" + textureImporter.spritePackingTag;
+                    if (textureImporter.textureType == TextureImporterType.Sprite)
+                    {
+                        if (!string.IsNullOrEmpty(textureImporter.spritePackingTag))
+                            return "atlas_" + textureImporter.spritePackingTag;
+                    }
                 }
             }
+            
              
             return FileUtility.GetABNameFromPath(path);
         }
